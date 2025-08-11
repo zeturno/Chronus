@@ -16,9 +16,8 @@ Feito com **Python (Flask)** no backend e **HTML, CSS e JavaScript puro** no fro
 
 ---
 
+Perfeito para você que quer deixar um jogo atualizando e desligar depois de um tempo ou programar para desligar enquanto você vai dormir assistindo.!
+
 ## 📦 Instalação
 
-Clone o repositório:
-```bash
-git clone https://github.com/seuusuario/ChronoControl.git
-cd ChronoControl
+Em construção
