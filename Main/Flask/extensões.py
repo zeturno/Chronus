@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, session, abort, send_file, send_from_directory
+from flask import Flask, redirect, url_for, session, abort, send_file, jsonify, request
 import socket
 import webview
 from waitress import serve
@@ -71,7 +71,7 @@ def Link_Start(Navegador, Porta = None ,IP = "localhost"):
 
     if Navegador == "pywebview":
         Config = {
-            "width" : 420, "height" : 300
+            "width" : 420, "height" : 650, "frameless" : True
         }
         print(teste_HTTP.status_code)
         webview.create_window("Chronus", URL_local,**Config)

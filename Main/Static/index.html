@@ -1,11 +1,311 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chronus - Relógio e Agendador</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1f1c2c, #928dab);
+    color: #eee;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .container {
+    background: rgba(0,0,0,0.7);
+    padding: 2rem;
+    border-radius: 12px;
+    width: 400px;
+    height: 545px;
+    text-align: center;
+  }
+  .clock {
+    font-size: 4rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 4px;
+  }
+  .scheduler label {
+    display: block;
+    margin: 0.5rem 0;
+    font-size: 1rem;
+  }
+  .scheduler input {
+    width: 60px;
+    padding: 0.3rem;
+    font-size: 1rem;
+    margin-left: 0.5rem;
+    border-radius: 5px;
+    border: none;
+  }
+  button {
+    margin-top: 1rem;
+    padding: 0.7rem 1.2rem;
+    font-size: 1rem;
+    background: #4e9af1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    margin-right: 10px;
+  }
+  button:hover {
+    background: #3b7cd1;
+  }
+  #cancel-button {
+    background: #f14e4e;
+  }
+  #cancel-button:hover {
+    background: #d13b3b;
+  }
+  .options {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  #feedback {
+    margin-top: 1rem;
+    font-weight: bold;
+    min-height: 24px;
+    color: #ffcc00;
+  }
+  #popup {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #222;
+    color: #ffcc00;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    user-select: none;
+    z-index: 1000;
+  }
+  #popup.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #progress-container {
+    margin-top: 15px;
+    background: #444;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 20px;
+  }
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #4e9af1;
+    transition: width 1s linear;
+  }
+  #remaining-time {
+    margin-top: 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    letter-spacing: 3px;
+    font-size: 1.1rem;
+  }
+</style>
 </head>
 <body>
-    <h1>Hello world</h1>
+  <div class="container">
+    <h1>Chronus</h1>
+    <div id="clock" class="clock">00:00:00</div>
+
+    <div class="scheduler">
+      <h2>Agendar desligamento</h2>
+      <form id="shutdown-form">
+        <label>
+          Dias:
+          <input type="number" id="days" min="0" value="0" />
+        </label>
+        <label>
+          Horas:
+          <input type="number" id="hours" min="0" max="23" value="0" />
+        </label>
+        <label>
+          Minutos:
+          <input type="number" id="minutes" min="0" max="59" value="0" />
+        </label>
+
+        <button type="submit">Agendar Desligamento</button>
+        <button type="button" id="cancel-button">Cancelar</button>
+      </form>
+    </div>
+
+    <div class="options">
+      <label>
+        <input type="checkbox" id="auto-start" />
+        Iniciar junto com o computador
+      </label>
+    </div>
+
+    <div id="feedback"></div>
+
+    <div id="progress-container" style="display:none;">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="remaining-time"></div>
+  </div>
+
+  <div id="popup"></div>
+
+<script>
+  function updateClock() {
+    const clock = document.getElementById('clock');
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    clock.textContent = `${h}:${m}:${s}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  const popup = document.getElementById('popup');
+  function showPopup(message) {
+    popup.textContent = message;
+    popup.classList.add('show');
+    setTimeout(() => {
+      popup.classList.remove('show');
+    }, 3000);
+  }
+
+  const form = document.getElementById('shutdown-form');
+  const feedback = document.getElementById('feedback');
+  const progressContainer = document.getElementById('progress-container');
+  const progressBar = document.getElementById('progress-bar');
+  const remainingTimeDisplay = document.getElementById('remaining-time');
+
+  let countdownInterval = null;
+  let totalSeconds = 0;
+  let remainingSeconds = 0;
+  let warned5 = false;
+  let warned1 = false;
+
+  function formatTime(sec) {
+    const d = Math.floor(sec / 86400);
+    sec %= 86400;
+    const h = Math.floor(sec / 3600);
+    sec %= 3600;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return [
+      String(d).padStart(2, '0'),
+      String(h).padStart(2, '0'),
+      String(m).padStart(2, '0'),
+      String(s).padStart(2, '0')
+    ].join(':');
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    if(countdownInterval) {
+      feedback.textContent = "Já existe um agendamento em andamento.";
+      return;
+    }
+
+    const days = parseInt(document.getElementById('days').value) || 0;
+    const hours = parseInt(document.getElementById('hours').value) || 0;
+    const minutes = parseInt(document.getElementById('minutes').value) || 0;
+
+    totalSeconds = days * 86400 + hours * 3600 + minutes * 60;
+    remainingSeconds = totalSeconds;
+
+    if(totalSeconds <= 0) {
+      feedback.textContent = "Escolha um tempo maior que zero.";
+      return;
+    }
+
+    warned5 = false;
+    warned1 = false;
+
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '100%';
+    remainingTimeDisplay.textContent = formatTime(remainingSeconds);
+
+    countdownInterval = setInterval(() => {
+      remainingSeconds--;
+
+      let progressPercent = (remainingSeconds / totalSeconds) * 100;
+      progressBar.style.width = progressPercent + '%';
+      remainingTimeDisplay.textContent = formatTime(remainingSeconds);
+
+      if(remainingSeconds === 300 && !warned5) {
+        showPopup("Atenção: 5 minutos restantes para desligar.");
+        warned5 = true;
+      }
+
+      if(remainingSeconds === 60 && !warned1) {
+        showPopup("Atenção: 1 minuto restante para desligar.");
+        warned1 = true;
+      }
+
+      if(remainingSeconds <= 0) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        progressContainer.style.display = 'none';
+        remainingTimeDisplay.textContent = '';
+        feedback.textContent = "Hora de desligar!";
+        shutdownNow();
+      }
+    }, 1000);
+  });
+
+  document.getElementById('cancel-button').addEventListener('click', () => {
+    if (!countdownInterval) {
+      feedback.textContent = "Nenhum agendamento para cancelar.";
+      setTimeout(() => {
+        feedback.textContent = "";
+      }, 3000);
+      return;
+    }
+
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+    progressContainer.style.display = 'none';
+    remainingTimeDisplay.textContent = '';
+    progressBar.style.width = '0%';
+    feedback.textContent = "Agendamento cancelado.";
+    showPopup("Desligamento cancelado.");
+
+    // Limpa feedback e tempo restante após alguns segundos
+    setTimeout(() => {
+      feedback.textContent = "";
+      remainingTimeDisplay.textContent = "";
+    }, 4000);
+  });
+
+  async function shutdownNow() {
+    try {
+      const response = await fetch('/shutdown_now', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ Desligar: 'Start' })
+      });
+
+      if (!response.ok) throw new Error('Erro ao desligar');
+
+      const data = await response.json();
+      console.log('Desligamento iniciado:', data);
+      showPopup("Desligamento iniciado.");
+    } catch (error) {
+      console.error('Erro na requisição:', error);
+      feedback.textContent = "Erro ao tentar desligar.";
+      showPopup("Falha ao iniciar desligamento.");
+    }
+  }
+</script>
 </body>
 </html>
