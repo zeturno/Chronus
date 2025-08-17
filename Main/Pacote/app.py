@@ -1,4 +1,4 @@
-from BackEnd.extensoes import caminhos_arquivos, send_file, request, Flask, os, time, io
+from Pacote.extensoes import caminhos_arquivos, send_file, request, Flask, os, time, io
 app = Flask(__name__)
 
 @app.route('/')
