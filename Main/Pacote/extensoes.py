@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, session, abort, send_file, jsonify, request
+from flask import Flask, redirect, url_for, session,send_file, jsonify, request
 import socket
 import webview
 from waitress import serve
@@ -10,15 +10,31 @@ import sys
 import time
 import random
 import string
+import tkinter as tk
+import pkgutil
+import io
+from plyer import notification
 #Modulos necessarios para rodar a aplicação sem erros!
 
-app = Flask(__name__)
-#objetos importante para rodar o App!
+
+
+def mostrar_popup(titulo, mensagem):
+    notification.notify(
+        title = titulo,
+        message = mensagem,
+        app_name = "Chronus",
+        timeout = 5
+    )
 
 def caminhos_arquivos(Nome_HTML):
-    caminho = os.path.dirname(__file__)
-    caminho_abs = os.path.join(caminho,"..","Static", Nome_HTML)
-    return caminho_abs
+    try:
+        caminho = pkgutil.get_data(__name__,f"Static/{Nome_HTML}")
+        return caminho.decode("utf-8")
+    except:
+        caminho = os.path.dirname(__file__)
+        caminho_abs = os.path.join(caminho,"..","Static", Nome_HTML)
+        return caminho_abs
+    
 
 def porta_dinâmica(IP= "localhost",Porta = 0):
     #Argumentos para fornecer o IP que vai procurar a porta, caso queira uma porta fixa usar o número no argmento!
@@ -47,7 +63,7 @@ def porta_dinâmica(IP= "localhost",Porta = 0):
             print(f"Erro na parte de portas: {erro}")
             break
 
-def Link_Start(Navegador, Porta = None ,IP = "localhost"):
+def Link_Start(app, Navegador, Porta = None ,IP = "localhost"):
     Porta = porta_dinâmica()
     abrir_threading = threading.Thread(target=lambda: serve(app,host = IP, port = Porta),daemon = True)
     abrir_threading.start()
@@ -71,10 +87,24 @@ def Link_Start(Navegador, Porta = None ,IP = "localhost"):
 
     if Navegador == "pywebview":
         Config = {
-            "width" : 420, "height" : 650, "frameless" : True
+            "width" : 528, "height" : 530, "frameless" : True
         }
         print(teste_HTTP.status_code)
-        webview.create_window("Chronus", URL_local,**Config)
+        class API:
+            def alerta_visual(self, titulo, mensagem):
+                mostrar_popup(titulo, mensagem)
+            
+            def minimizar(self):
+                janela.minimize()
+            
+            def close(self):
+                janela.destroy()
+                time.sleep(0.1)
+                os._exit(0)
+
+        api = API()
+
+        janela = webview.create_window("Chronus", URL_local,js_api=api,**Config)
         webview.start()
         
     else:

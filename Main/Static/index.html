@@ -5,45 +5,103 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Chronus - Relógio e Agendador</title>
 <style>
+  :root {
+    --bg-gradient-dark: linear-gradient(135deg, #1f1c2c, #928dab);
+    --container-bg-dark: rgba(0,0,0,0.7);
+    --text-dark: #eee;
+    --bg-gradient-light: linear-gradient(135deg, #f5f5f5, #ddd);
+    --container-bg-light: rgba(255,255,255,0.85);
+    --text-light: #222;
+    --border-light: #aaa;
+  }
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #1f1c2c, #928dab);
-    color: #eee;
     margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
+    background: var(--bg-gradient-dark);
+    color: var(--text-dark);
+    transition: background 0.3s, color 0.3s;
+  }
+  body.light {
+    background: var(--bg-gradient-light);
+    color: var(--text-light);
   }
   .container {
-    background: rgba(0,0,0,0.7);
-    padding: 2rem;
+    background: var(--container-bg-dark);
+    padding: 1rem;
     border-radius: 12px;
-    width: 400px;
-    height: 545px;
+    width: 510px;
+    height: 490px;
     text-align: center;
+    box-sizing: border-box;
+    transition: background 0.3s;
+  }
+  body.light .container {
+    background: var(--container-bg-light);
+  }
+  .top-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  .top-bar button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  .top-bar button:hover {
+    background: rgba(255,255,255,0.15);
   }
   .clock {
-    font-size: 4rem;
+    font-size: 3.5rem;
     font-weight: bold;
     margin-bottom: 1rem;
     font-family: 'Courier New', Courier, monospace;
     letter-spacing: 4px;
   }
+  .scheduler h2 {
+    margin-bottom: 1rem;
+  }
+
+  /* Aqui começa o ajuste para alinhar os labels/inputs na mesma linha */
+  .scheduler form {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 1rem;
+  }
   .scheduler label {
-    display: block;
-    margin: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     font-size: 1rem;
   }
+  /* Fim do ajuste */
+
   .scheduler input {
     width: 60px;
     padding: 0.3rem;
     font-size: 1rem;
-    margin-left: 0.5rem;
+    margin-top: 0.3rem;
     border-radius: 5px;
     border: none;
+    text-align: center;
   }
-  button {
+  body.light .scheduler input {
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: #000;
+  }
+  button.action {
     margin-top: 1rem;
     padding: 0.7rem 1.2rem;
     font-size: 1rem;
@@ -55,7 +113,7 @@
     transition: background 0.3s ease;
     margin-right: 10px;
   }
-  button:hover {
+  button.action:hover {
     background: #3b7cd1;
   }
   #cancel-button {
@@ -117,27 +175,24 @@
 </head>
 <body>
   <div class="container">
+    <div class="top-bar">
+      <button onclick="toggleTheme()">🌓</button>
+      <button onclick="minimizar()">🗕</button>
+      <button onclick="closeApp()">✖</button>
+    </div>
+
     <h1>Chronus</h1>
     <div id="clock" class="clock">00:00:00</div>
 
     <div class="scheduler">
       <h2>Agendar desligamento</h2>
       <form id="shutdown-form">
-        <label>
-          Dias:
-          <input type="number" id="days" min="0" value="0" />
-        </label>
-        <label>
-          Horas:
-          <input type="number" id="hours" min="0" max="23" value="0" />
-        </label>
-        <label>
-          Minutos:
-          <input type="number" id="minutes" min="0" max="59" value="0" />
-        </label>
+        <label>Dias:<input type="number" id="days" min="0" value="0" /></label>
+        <label>Horas:<input type="number" id="hours" min="0" max="23" value="0" /></label>
+        <label>Minutos:<input type="number" id="minutes" min="0" max="59" value="0" /></label>
 
-        <button type="submit">Agendar Desligamento</button>
-        <button type="button" id="cancel-button">Cancelar</button>
+        <button type="submit" class="action">Agendar</button>
+        <button type="button" id="cancel-button" class="action">Cancelar</button>
       </form>
     </div>
 
@@ -159,13 +214,37 @@
   <div id="popup"></div>
 
 <script>
+  // Alternância de tema
+  function toggleTheme() {
+    document.body.classList.toggle('light');
+  }
+
+  // Controle de janela via pywebview
+  function minimizar() {
+    if (window.pywebview?.api?.minimizar) {
+      window.pywebview.api.minimizar();
+    } else {
+      console.warn("Função minimizar não encontrada na API.");
+    }
+  }
+  function closeApp() {
+    if (window.pywebview?.api?.close) {
+      window.pywebview.api.close();
+    } else {
+      console.warn("Função fechar não encontrada na API.");
+    }
+  }
+
+  function mostrarAlerta(titulo, mensagem) {
+    if (window.pywebview?.api?.alerta_visual) {
+      window.pywebview.api.alerta_visual(titulo, mensagem);
+    }
+  }
+
   function updateClock() {
     const clock = document.getElementById('clock');
     const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
-    clock.textContent = `${h}:${m}:${s}`;
+    clock.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
   }
   setInterval(updateClock, 1000);
   updateClock();
@@ -174,9 +253,7 @@
   function showPopup(message) {
     popup.textContent = message;
     popup.classList.add('show');
-    setTimeout(() => {
-      popup.classList.remove('show');
-    }, 3000);
+    setTimeout(() => popup.classList.remove('show'), 3000);
   }
 
   const form = document.getElementById('shutdown-form');
@@ -184,12 +261,7 @@
   const progressContainer = document.getElementById('progress-container');
   const progressBar = document.getElementById('progress-bar');
   const remainingTimeDisplay = document.getElementById('remaining-time');
-
-  let countdownInterval = null;
-  let totalSeconds = 0;
-  let remainingSeconds = 0;
-  let warned5 = false;
-  let warned1 = false;
+  let countdownInterval = null, totalSeconds = 0, remainingSeconds = 0, warned5 = false, warned1 = false;
 
   function formatTime(sec) {
     const d = Math.floor(sec / 86400);
@@ -198,58 +270,42 @@
     sec %= 3600;
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    return [
-      String(d).padStart(2, '0'),
-      String(h).padStart(2, '0'),
-      String(m).padStart(2, '0'),
-      String(s).padStart(2, '0')
-    ].join(':');
+    return [d,h,m,s].map(n=>String(n).padStart(2,'0')).join(':');
   }
 
   form.addEventListener('submit', e => {
     e.preventDefault();
-
     if(countdownInterval) {
-      feedback.textContent = "Já existe um agendamento em andamento.";
+      feedback.textContent = "Já existe um agendamento.";
       return;
     }
-
     const days = parseInt(document.getElementById('days').value) || 0;
     const hours = parseInt(document.getElementById('hours').value) || 0;
     const minutes = parseInt(document.getElementById('minutes').value) || 0;
-
-    totalSeconds = days * 86400 + hours * 3600 + minutes * 60;
-    remainingSeconds = totalSeconds;
-
+    totalSeconds = days*86400 + hours*3600 + minutes*60;
     if(totalSeconds <= 0) {
       feedback.textContent = "Escolha um tempo maior que zero.";
       return;
     }
-
-    warned5 = false;
-    warned1 = false;
-
+    remainingSeconds = totalSeconds;
+    warned5 = false; warned1 = false;
     progressContainer.style.display = 'block';
     progressBar.style.width = '100%';
     remainingTimeDisplay.textContent = formatTime(remainingSeconds);
-
     countdownInterval = setInterval(() => {
       remainingSeconds--;
-
-      let progressPercent = (remainingSeconds / totalSeconds) * 100;
-      progressBar.style.width = progressPercent + '%';
+      progressBar.style.width = (remainingSeconds/totalSeconds)*100 + '%';
       remainingTimeDisplay.textContent = formatTime(remainingSeconds);
-
       if(remainingSeconds === 300 && !warned5) {
-        showPopup("Atenção: 5 minutos restantes para desligar.");
+        showPopup("5 minutos restantes");
+        mostrarAlerta("Chronus", "Faltam 5 minutos");
         warned5 = true;
       }
-
       if(remainingSeconds === 60 && !warned1) {
-        showPopup("Atenção: 1 minuto restante para desligar.");
+        showPopup("1 minuto restante");
+        mostrarAlerta("Chronus", "Falta 1 minuto");
         warned1 = true;
       }
-
       if(remainingSeconds <= 0) {
         clearInterval(countdownInterval);
         countdownInterval = null;
@@ -264,12 +320,9 @@
   document.getElementById('cancel-button').addEventListener('click', () => {
     if (!countdownInterval) {
       feedback.textContent = "Nenhum agendamento para cancelar.";
-      setTimeout(() => {
-        feedback.textContent = "";
-      }, 3000);
+      setTimeout(()=>feedback.textContent="",3000);
       return;
     }
-
     clearInterval(countdownInterval);
     countdownInterval = null;
     progressContainer.style.display = 'none';
@@ -277,32 +330,20 @@
     progressBar.style.width = '0%';
     feedback.textContent = "Agendamento cancelado.";
     showPopup("Desligamento cancelado.");
-
-    // Limpa feedback e tempo restante após alguns segundos
-    setTimeout(() => {
-      feedback.textContent = "";
-      remainingTimeDisplay.textContent = "";
-    }, 4000);
+    setTimeout(()=>{feedback.textContent=""; remainingTimeDisplay.textContent="";},4000);
   });
 
   async function shutdownNow() {
     try {
       const response = await fetch('/shutdown_now', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ Desligar: 'Start' })
       });
-
-      if (!response.ok) throw new Error('Erro ao desligar');
-
-      const data = await response.json();
-      console.log('Desligamento iniciado:', data);
+      if (!response.ok) throw new Error();
       showPopup("Desligamento iniciado.");
-    } catch (error) {
-      console.error('Erro na requisição:', error);
-      feedback.textContent = "Erro ao tentar desligar.";
+    } catch {
+      feedback.textContent = "Erro ao desligar.";
       showPopup("Falha ao iniciar desligamento.");
     }
   }
