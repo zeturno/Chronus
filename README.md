@@ -1,6 +1,6 @@
 # ⏱️ Chronus
 
-Chrono Control é um relógio digital com funções de automação para controle do computador, como desligamento, reinício e alarmes.  
+Chronus Control é um relógio digital com funções de automação para controle do computador, como desligamento, reinício e alarmes.  
 Feito com **Python (Flask)** no backend e **HTML, CSS e JavaScript puro** no frontend e empacotado com nuikta.
 
 ---
